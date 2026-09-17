@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mimopass Admin Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3B5998;
+            --primary-dark: #1F3A93;
+            --accent: #00897B;
+            --text: #333;
+            --text-secondary: #666;
+            --bg-light: #F5F5F5;
+            --border-color: #E8E8E8;
+            --white: #FFFFFF;
+            --error: #f44336;
+            --success: #4CAF50;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-light);
+            color: var(--text);
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .login-card {
+            background: var(--white);
+            padding: 3rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-card h1 {
+            color: var(--primary);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.85rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.1);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--white);
+            padding: 0.9rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #006b63;
+        }
+
+        .admin-container {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .admin-container.show {
+            display: block;
+        }
+
+        header {
+            background: var(--white);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .btn-logout {
+            background: var(--error);
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-logout:hover {
+            background: #d32f2f;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab-btn {
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.show {
+            display: block;
+        }
+
+        .content-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .content-card h2 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        textarea.large {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .submission-card {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent);
+        }
+
+        .submission-card h3 {
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .submission-detail {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .submission-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #E8F5E9;
+            color: #2E7D32;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message.error {
+            background: #FFEBEE;
+            color: #C62828;
+            border-left: 4px solid #f44336;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            background: var(--accent);
+            color: var(--white);
+            padding: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            display: block;
+        }
+
+        .file-label:hover {
+            background: #006b63;
+        }
+
+        .submissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .login-card {
+                padding: 1.5rem;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tab-btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .submissions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN -->
+    <div class="login-container" id="login-container">
+        <div class="login-card">
+            <h1>Mimopass Admin</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Passwort</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn">Anmelden</button>
+            </form>
+            <div class="message" id="login-message"></div>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="admin-container" id="admin-container">
+        <header>
+            <h1>Mimopass Admin Panel</h1>
+            <button class="btn btn-logout" onclick="logout()">Abmelden</button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('content')">Inhalt</button>
+            <button class="tab-btn" onclick="showTab('legal')">Rechtliches</button>
+            <button class="tab-btn" onclick="showTab('drivers')">Fahrer</button>
+            <button class="tab-btn" onclick="showTab('senders')">Pakete</button>
+        </div>
+
+        <!-- CONTENT TAB -->
+        <div class="tab-content show" id="content">
+            <div class="message" id="content-message"></div>
+
+            <div class="content-card">
+                <h2>Hero Titel</h2>
+                <div class="form-group">
+                    <label>Deutsch</label>
+                    <input type="text" id="hero-title-de" value="Deine Route hat einen Wert">
+                </div>
+                <div class="form-group">
+                    <label>Kroatisch</label>
+                    <input type="text" id="hero-title-hr" value="Tvoja ruta ima vrijednost">
+                </div>
+                <button class="btn" onclick="saveContent('hero-title')">Speichern</button>
+            </div>
+
+            <div class="content-card">
+                <h2>Hero Untertitel</h2>
+                <div class="form-group">
+                    <label>Deutsch</label>
+                    <input type="text" id="hero-subtitle-de" value="Fahrt nicht leer. Verdiene Geld. Hilf anderen.">
+                </div>
+                <div class="form-group">
+                    <label>Kroatisch</label>
+                    <input type="text" id="hero-subtitle-hr" value="Ne vozi prazno. Zaradite Novac. Pomozi drugima.">
+                </div>
+                <button class="btn" onclick="saveContent('hero-subtitle')">Speichern</button>
+            </div>
+
+            <div class="content-card">
+                <h2>Statistiken</h2>
+                <div class="form-group">
+                    <label>Aktive Fahrer</label>
+                    <input type="number" id="stat-drivers" value="47">
+                </div>
+                <div class="form-group">
+                    <label>Pakete diesen Monat</label>
+                    <input type="number" id="stat-packages" value="63">
+                </div>
+                <div class="form-group">
+                    <label>Zufriedene Nutzer</label>
+                    <input type="number" id="stat-users" value="124">
+                </div>
+                <button class="btn" onclick="saveContent('stats')">Speichern</button>
+            </div>
+        </div>
+
+        <!-- LEGAL TAB -->
+        <div class="tab-content" id="legal">
+            <div class="message" id="legal-message"></div>
+
+            <div class="content-card">
+                <h2>Nutzungsbedingungen</h2>
+                <div class="form-group">
+                    <label>Inhalt (Deutsch)</label>
+                    <textarea class="large" id="terms-de" placeholder="Geben Sie Ihre Nutzungsbedingungen ein..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Inhalt (Kroatisch)</label>
+                    <textarea class="large" id="terms-hr" placeholder="Unesite svoje uvjete korištenja..."></textarea>
+                </div>
+                <button class="btn" onclick="saveLegal('terms')">Speichern</button>
+            </div>
+
+            <div class="content-card">
+                <h2>Datenschutzerklärung</h2>
+                <div class="form-group">
+                    <label>Inhalt (Deutsch)</label>
+                    <textarea class="large" id="privacy-de" placeholder="Geben Sie Ihre Datenschutzerklärung ein..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Inhalt (Kroatisch)</label>
+                    <textarea class="large" id="privacy-hr" placeholder="Unesite svoju izjavu o zaštiti podataka..."></textarea>
+                </div>
+                <button class="btn" onclick="saveLegal('privacy')">Speichern</button>
+            </div>
+
+            <div class="content-card">
+                <h2>Cookie-Richtlinie</h2>
+                <div class="form-group">
+                    <label>Inhalt (Deutsch)</label>
+                    <textarea class="large" id="cookies-de" placeholder="Geben Sie Ihre Cookie-Richtlinie ein..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Inhalt (Kroatisch)</label>
+                    <textarea class="large" id="cookies-hr" placeholder="Unesite svoju politiku kolačića..."></textarea>
+                </div>
+                <button class="btn" onclick="saveLegal('cookies')">Speichern</button>
+            </div>
+
+            <div class="content-card">
+                <h2>Impressum</h2>
+                <div class="form-group">
+                    <label>Inhalt (Deutsch)</label>
+                    <textarea class="large" id="impressum-de" placeholder="Geben Sie Ihr Impressum ein..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Inhalt (Kroatisch)</label>
+                    <textarea class="large" id="impressum-hr" placeholder="Unesite svoju impresumu..."></textarea>
+                </div>
+                <button class="btn" onclick="saveLegal('impressum')">Speichern</button>
+            </div>
+        </div>
+
+        <!-- DRIVERS TAB -->
+        <div class="tab-content" id="drivers">
+            <div class="content-card">
+                <h2>Fahrer-Einträge</h2>
+                <div id="drivers-list"></div>
+            </div>
+        </div>
+
+        <!-- SENDERS TAB -->
+        <div class="tab-content" id="senders">
+            <div class="content-card">
+                <h2>Paket-Einträge</h2>
+                <div id="senders-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION - ADD YOUR CREDENTIALS HERE
+        // ============================================================
+        
+        const CONFIG = {
+            // From Supabase: Settings → API
+            SUPABASE_URL: 'https://wzetwoyjcyfdmhekyozl.supabase.co',
+            SUPABASE_KEY: 'sb_publishable_KwQ_kSiDlWyUN4qvPWTzUw_u1g8myfK',
+            
+            // Create a strong password for admin access
+            ADMIN_PASSWORD: 'EvojednelozinkeMaloBoljeE2026?!R',
+        };
+
+        const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+
+        // ============================================================
+        // AUTHENTICATION
+        // ============================================================
+        
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+
+            if (password === CONFIG.ADMIN_PASSWORD) {
+                localStorage.setItem('mimopass-admin-authenticated', 'true');
+                showAdminPanel();
+                document.getElementById('password').value = '';
+            } else {
+                showMessage('login-message', 'Falsches Passwort', 'error');
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('mimopass-admin-authenticated');
+            location.reload();
+        }
+
+        function showAdminPanel() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('admin-container').classList.add('show');
+            loadData();
+        }
+
+        // Check if already authenticated
+        if (localStorage.getItem('mimopass-admin-authenticated') === 'true') {
+            showAdminPanel();
+        }
+
+        // ============================================================
+        // TAB NAVIGATION
+        // ============================================================
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('show'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('show');
+            event.target.classList.add('active');
+
+            if (tabName === 'drivers') loadDrivers();
+            if (tabName === 'senders') loadSenders();
+        }
+
+        // ============================================================
+        // MESSAGES
+        // ============================================================
+
+        function showMessage(elementId, text, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = `message show ${type}`;
+            setTimeout(() => element.classList.remove('show'), 3000);
+        }
+
+        // ============================================================
+        // SAVE CONTENT
+        // ============================================================
+
+        async function saveContent(type) {
+            try {
+                const data = {};
+                
+                if (type === 'hero-title') {
+                    data.hero_title_de = document.getElementById('hero-title-de').value;
+                    data.hero_title_hr = document.getElementById('hero-title-hr').value;
+                } else if (type === 'hero-subtitle') {
+                    data.hero_subtitle_de = document.getElementById('hero-subtitle-de').value;
+                    data.hero_subtitle_hr = document.getElementById('hero-subtitle-hr').value;
+                } else if (type === 'stats') {
+                    data.stat_drivers = document.getElementById('stat-drivers').value;
+                    data.stat_packages = document.getElementById('stat-packages').value;
+                    data.stat_users = document.getElementById('stat-users').value;
+                }
+
+                // Save to localStorage for now (you can enhance with Supabase later)
+                localStorage.setItem(`mimopass-content-${type}`, JSON.stringify(data));
+                showMessage('content-message', 'Gespeichert!', 'success');
+            } catch (error) {
+                showMessage('content-message', 'Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function saveLegal(type) {
+            try {
+                const data = {
+                    de: document.getElementById(`${type}-de`).value,
+                    hr: document.getElementById(`${type}-hr`).value,
+                };
+
+                localStorage.setItem(`mimopass-legal-${type}`, JSON.stringify(data));
+                showMessage('legal-message', 'Gespeichert!', 'success');
+            } catch (error) {
+                showMessage('legal-message', 'Fehler beim Speichern', 'error');
+            }
+        }
+
+        // ============================================================
+        // LOAD DATA
+        // ============================================================
+
+        async function loadData() {
+            // Load content from localStorage
+            const contentData = JSON.parse(localStorage.getItem('mimopass-content-hero-title') || '{}');
+            if (contentData.hero_title_de) document.getElementById('hero-title-de').value = contentData.hero_title_de;
+            if (contentData.hero_title_hr) document.getElementById('hero-title-hr').value = contentData.hero_title_hr;
+
+            // Load legal docs
+            ['terms', 'privacy', 'cookies', 'impressum'].forEach(type => {
+                const data = JSON.parse(localStorage.getItem(`mimopass-legal-${type}`) || '{"de":"","hr":""}');
+                if (document.getElementById(`${type}-de`)) document.getElementById(`${type}-de`).value = data.de || '';
+                if (document.getElementById(`${type}-hr`)) document.getElementById(`${type}-hr`).value = data.hr || '';
+            });
+        }
+
+        async function loadDrivers() {
+            try {
+                const { data, error } = await supabase.from('drivers').select('*').order('created_at', { ascending: false });
+                
+                if (error) throw error;
+
+                const html = data.map(driver => `
+                    <div class="submission-card">
+                        <h3>${driver.name}</h3>
+                        <div class="submission-detail"><span class="submission-label">Route:</span> ${driver.route}</div>
+                        <div class="submission-detail"><span class="submission-label">Datum:</span> ${driver.date}</div>
+                        <div class="submission-detail"><span class="submission-label">Notizen:</span> ${driver.notes || 'Keine'}</div>
+                        <div class="submission-detail"><span class="submission-label">Newsletter:</span> ${driver.newsletter_consent ? 'Ja' : 'Nein'}</div>
+                        <div class="submission-detail"><span class="submission-label">Erstellt:</span> ${new Date(driver.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('drivers-list').innerHTML = html || '<p>Keine Einträge</p>';
+            } catch (error) {
+                console.error('Fehler beim Laden der Fahrer:', error);
+            }
+        }
+
+        async function loadSenders() {
+            try {
+                const { data, error } = await supabase.from('senders').select('*').order('created_at', { ascending: false });
+                
+                if (error) throw error;
+
+                const html = data.map(sender => `
+                    <div class="submission-card">
+                        <h3>${sender.name}</h3>
+                        <div class="submission-detail"><span class="submission-label">Was:</span> ${sender.what}</div>
+                        <div class="submission-detail"><span class="submission-label">Von:</span> ${sender.from_location} <span class="submission-label">Nach:</span> ${sender.to_location}</div>
+                        <div class="submission-detail"><span class="submission-label">Notizen:</span> ${sender.notes || 'Keine'}</div>
+                        <div class="submission-detail"><span class="submission-label">Newsletter:</span> ${sender.newsletter_consent ? 'Ja' : 'Nein'}</div>
+                        <div class="submission-detail"><span class="submission-label">Erstellt:</span> ${new Date(sender.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('senders-list').innerHTML = html || '<p>Keine Einträge</p>';
+            } catch (error) {
+                console.error('Fehler beim Laden der Pakete:', error);
+            }
+        }
+    </script>
+</body>
+</html>
